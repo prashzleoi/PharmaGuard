@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PharmaGuard | Precision Medicine AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-black via-blue-950 to-blue-900 text-white overflow-x-hidden">
+
+<!-- ================= LANDING PAGE ================= -->
+<section id="landingPage" class="relative min-h-screen flex items-center justify-center px-6">
+
+    <div class="absolute w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse top-10 left-10"></div>
+    <div class="absolute w-96 h-96 bg-purple-600/30 rounded-full blur-3xl animate-pulse bottom-10 right-10"></div>
+
+    <div class="relative z-10 backdrop-blur-xl bg-white/10 border border-white/20 
+                shadow-2xl rounded-3xl p-16 text-center max-w-3xl">
+
+        <h1 class="text-6xl font-bold mb-6">
+            PharmaGuard
+        </h1>
+
+        <p class="text-blue-200 text-lg mb-8">
+            AI-driven pharmacogenomic intelligence delivering 
+            precision therapy recommendations through advanced genomic analysis.
+        </p>
+
+        <button onclick="enterPlatform()"
+            class="px-10 py-4 rounded-full text-lg font-semibold
+                   bg-gradient-to-r from-blue-500 to-purple-500
+                   hover:scale-105 active:scale-95
+                   transition duration-300 shadow-xl">
+            Enter Platform
+        </button>
+
+    </div>
+</section>
+
+
+<!-- ================= MAIN APPLICATION ================= -->
+<section id="mainApp" class="hidden opacity-0 transition-opacity duration-700">
+
+<div class="relative overflow-hidden">
+
+    <div class="max-w-6xl mx-auto px-6 py-20 text-center">
+        <h1 class="text-5xl md:text-6xl font-bold leading-tight">
+            Precision Medicine<br>
+            <span class="text-blue-400">Powered by AI</span>
+        </h1>
+
+        <p class="mt-6 text-blue-200 max-w-2xl mx-auto text-lg">
+            PharmaGuard analyzes pharmacogenomic variants from VCF files and provides
+            CPIC-aligned therapeutic recommendations with explainable AI insights.
+        </p>
+    </div>
+
+</div>
+
+<div class="max-w-4xl mx-auto px-6 -mt-10 pb-20">
+
+    <div class="backdrop-blur-xl bg-white/10 border border-white/20 
+                shadow-2xl rounded-2xl p-10">
+
+        <h2 class="text-2xl font-semibold mb-4">
+            Pharmacogenomic Risk Analysis
+        </h2>
+
+        <p class="text-blue-200 text-sm mb-8">
+            Upload a patient VCF file and enter drug names to receive clinical recommendations.
+        </p>
+
+        <div id="errorBox"
+             class="hidden bg-red-500/20 border border-red-500 text-red-200 p-3 rounded mb-6">
+        </div>
+
+        <form id="analysisForm" enctype="multipart/form-data" class="space-y-8">
+
+            <div id="dropZone"
+                 class="border-2 border-dashed border-white/30 
+                        p-10 rounded-xl text-center cursor-pointer
+                        bg-white/5 hover:bg-white/10 transition duration-300">
+
+                <p class="text-blue-200 text-lg">Drag & Drop VCF File</p>
+                <p class="text-sm text-blue-400 mt-2">or click to browse (Max 5MB)</p>
+                <input type="file" id="fileInput" name="file" required class="hidden">
+            </div>
+
+            <div id="fileInfo" class="text-sm text-blue-300"></div>
+
+            <div>
+                <label class="block font-medium mb-3 text-blue-200">
+                    Enter Drug Name(s)
+                </label>
+                <input type="text"
+                       id="drugInput"
+                       name="drug"
+                       placeholder="CLOPIDOGREL, WARFARIN"
+                       required
+                       class="w-full bg-white/10 border border-white/30 
+                              rounded-lg p-3 text-white 
+                              placeholder-blue-300 focus:outline-none 
+                              focus:ring-2 focus:ring-blue-400">
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-blue-500 hover:bg-blue-600 
+                           transition duration-300 
+                           text-white py-4 rounded-xl 
+                           font-semibold text-lg shadow-lg">
+                Analyze Pharmacogenomic Risk
+            </button>
+        </form>
+
+        <div id="loading" class="hidden text-center mt-10">
+            <div class="flex justify-center items-center gap-4">
+                <div class="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                <div class="w-3 h-3 bg-blue-400 rounded-full animate-ping"></div>
+            </div>
+            <p class="mt-4 text-blue-300 font-medium tracking-wide">
+                Analyzing genomic intelligence...
+            </p>
+        </div>
+
+        <div id="results" class="mt-12 space-y-8"></div>
+
+    </div>
+</div>
+
+</section>
+
+
+<script>
+
+/* ================= LANDING TRANSITION ================= */
+
+function enterPlatform() {
+    const landing = document.getElementById("landingPage");
+    const app = document.getElementById("mainApp");
+
+    landing.classList.add("opacity-0");
+
+    setTimeout(() => {
+        landing.style.display = "none";
+        app.classList.remove("hidden");
+
+        setTimeout(() => {
+            app.classList.remove("opacity-0");
+        }, 50);
+
+    }, 500);
+}
+
+/* ================= ORIGINAL LOGIC ================= */
+
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+const fileInfo = document.getElementById("fileInfo");
+
+dropZone.addEventListener("click", () => fileInput.click());
+
+dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.classList.add("bg-blue-500/10");
+});
+
+dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("bg-blue-500/10");
+});
+
+dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    fileInput.files = e.dataTransfer.files;
+    updateFileInfo();
+});
+
+fileInput.addEventListener("change", updateFileInfo);
+
+function updateFileInfo() {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        showError("File exceeds 5MB limit.");
+        fileInput.value = "";
+        return;
+    }
+
+    fileInfo.innerHTML = `
+        <div class="bg-white/5 p-3 rounded-lg border border-white/20">
+            <strong>Selected:</strong> ${file.name}<br>
+            <strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB
+        </div>
+    `;
+}
+
+document.getElementById("analysisForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    formData.append("drug", document.getElementById("drugInput").value);
+
+    document.getElementById("loading").classList.remove("hidden");
+    document.getElementById("results").innerHTML = "";
+    hideError();
+
+    const response = await fetch("/analyze", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+    document.getElementById("loading").classList.add("hidden");
+
+    if (data.error) {
+        showError(data.error);
+        return;
+    }
+
+    displayResults(data);
+});
+
+function getRiskColor(risk) {
+    if (risk === "Safe") return "border-green-400 bg-green-500/10";
+    if (risk === "Adjust Dosage") return "border-yellow-400 bg-yellow-500/10";
+    if (risk === "Ineffective" || risk === "Toxic") return "border-red-400 bg-red-500/10";
+    return "border-white/30 bg-white/5";
+}
+
+/* ================= FIXED JSON HANDLING ================= */
+
+function displayResults(data) {
+
+    const resultsDiv = document.getElementById("results");
+    resultsDiv.innerHTML = "";
+
+    window.latestResults = data;
+
+    data.forEach((result, index) => {
+
+        const card = document.createElement("div");
+        card.className = `border-l-4 p-8 rounded-xl shadow-xl backdrop-blur 
+                          transition hover:scale-[1.02] duration-300 
+                          ${getRiskColor(result.risk_assessment.risk_label)}`;
+
+        card.innerHTML = `
+            <h3 class="text-2xl font-bold mb-4">${result.drug}</h3>
+            <p><strong>Risk:</strong> ${result.risk_assessment.risk_label}</p>
+            <p><strong>Severity:</strong> ${result.risk_assessment.severity}</p>
+            <p><strong>Confidence:</strong> ${result.risk_assessment.confidence_score}</p>
+
+            <div class="mt-4">
+                <p><strong>Gene:</strong> ${result.pharmacogenomic_profile.primary_gene}</p>
+                <p><strong>Phenotype:</strong> ${result.pharmacogenomic_profile.phenotype}</p>
+                <p><strong>Diplotype:</strong> ${result.pharmacogenomic_profile.diplotype}</p>
+            </div>
+
+            <div class="mt-6">
+                <p class="font-semibold">Clinical Recommendation:</p>
+                <p>${result.clinical_recommendation.action}</p>
+            </div>
+
+            <button onclick="toggleExplanation(this)" 
+                    class="mt-6 text-blue-300 hover:text-blue-400 underline text-sm">
+                Show Explanation
+            </button>
+
+            <div class="hidden mt-4 text-sm text-blue-200 whitespace-pre-line">
+                ${result.llm_generated_explanation.summary}
+            </div>
+
+            <div class="mt-6 flex gap-4">
+                <button onclick="downloadJSON(${index})"
+                        class="bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-lg text-sm">
+                    Download JSON
+                </button>
+                <button onclick="copyJSON(${index})"
+                        class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg text-sm">
+                    Copy JSON
+                </button>
+            </div>
+        `;
+
+        resultsDiv.appendChild(card);
+    });
+}
+
+function downloadJSON(index) {
+    const data = window.latestResults[index];
+
+    const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pharmaguard_result.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+function copyJSON(index) {
+    const data = window.latestResults[index];
+
+    navigator.clipboard.writeText(
+        JSON.stringify(data, null, 2)
+    );
+
+    alert("JSON copied!");
+}
+
+function toggleExplanation(button) {
+    const explanation = button.nextElementSibling;
+    explanation.classList.toggle("hidden");
+}
+
+function showError(message) {
+    const box = document.getElementById("errorBox");
+    box.textContent = message;
+    box.classList.remove("hidden");
+}
+
+function hideError() {
+    document.getElementById("errorBox").classList.add("hidden");
+}
+
+</script>
+
+</body>
+</html>
