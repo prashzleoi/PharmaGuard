@@ -1,21 +1,18 @@
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import JSONResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.requests import Request
-from datetime import datetime
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 import uuid
 
 from vcf_parser import parse_vcf
 from risk_engine import assess_risk
 from llm_explainer import generate_explanation
 
-app = FastAPI()
-templates = Jinja2Templates(directory="../frontend/templates")
 
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
-
+# Initialize FastAPI only ONCE
 app = FastAPI()
+
+# Enable CORS (for Netlify frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # For hackathon demo
@@ -23,13 +20,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+
 # =========================================
 # Enhanced CPIC Clinical Recommendation Engine
 # =========================================
 def get_clinical_recommendation(drug, phenotype):
     drug = drug.upper()
 
-    # CYP2C19 – CLOPIDOGREL
     if drug == "CLOPIDOGREL":
         if phenotype in ["IM", "PM"]:
             return {
@@ -41,7 +41,6 @@ def get_clinical_recommendation(drug, phenotype):
             "guideline_source": "CPIC Level A – CYP2C19 & Clopidogrel"
         }
 
-    # CYP2C9 – WARFARIN
     if drug == "WARFARIN":
         if phenotype in ["IM", "PM"]:
             return {
@@ -53,9 +52,7 @@ def get_clinical_recommendation(drug, phenotype):
             "guideline_source": "CPIC Level A – CYP2C9 & Warfarin"
         }
 
-    # CYP2D6 – CODEINE
     if drug == "CODEINE":
-
         if phenotype == "PM":
             return {
                 "action": "Avoid codeine due to lack of efficacy",
@@ -79,7 +76,6 @@ def get_clinical_recommendation(drug, phenotype):
             "guideline_source": "CPIC Level A – CYP2D6 & Codeine"
         }
 
-    # SLCO1B1 – SIMVASTATIN
     if drug == "SIMVASTATIN":
         if phenotype in ["IM", "PM"]:
             return {
@@ -91,7 +87,6 @@ def get_clinical_recommendation(drug, phenotype):
             "guideline_source": "CPIC Level A – SLCO1B1 & Simvastatin"
         }
 
-    # TPMT – AZATHIOPRINE
     if drug == "AZATHIOPRINE":
         if phenotype == "PM":
             return {
@@ -108,7 +103,6 @@ def get_clinical_recommendation(drug, phenotype):
             "guideline_source": "CPIC Level A – TPMT & Azathioprine"
         }
 
-    # DPYD – FLUOROURACIL
     if drug == "FLUOROURACIL":
         if phenotype in ["IM", "PM"]:
             return {
@@ -126,44 +120,29 @@ def get_clinical_recommendation(drug, phenotype):
     }
 
 
-
-
+# =========================================
+# Analyze Endpoint
+# =========================================
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...), drug: str = Form(...)):
 
-    # 1️⃣ Validate extension
     if not file.filename.endswith(".vcf"):
-        return JSONResponse(
-            {"error": "Invalid file format. Please upload a .vcf file."},
-            status_code=400
-        )
+        return JSONResponse({"error": "Invalid file format. Please upload a .vcf file."}, status_code=400)
 
     content = await file.read()
 
-    # 2️⃣ Validate size
     if len(content) > MAX_FILE_SIZE:
-        return JSONResponse(
-            {"error": "File exceeds 5MB size limit."},
-            status_code=400
-        )
+        return JSONResponse({"error": "File exceeds 5MB size limit."}, status_code=400)
 
     decoded_content = content.decode(errors="ignore")
 
-    # 3️⃣ Validate VCF header
     if not decoded_content.startswith("##fileformat=VCFv4.2"):
-        return JSONResponse(
-            {"error": "Invalid VCF file structure. Must be VCF v4.2."},
-            status_code=400
-        )
+        return JSONResponse({"error": "Invalid VCF file structure. Must be VCF v4.2."}, status_code=400)
 
-    # 4️⃣ Parse VCF
     try:
         variants = parse_vcf(decoded_content)
     except Exception:
-        return JSONResponse(
-            {"error": "Error parsing VCF file."},
-            status_code=400
-        )
+        return JSONResponse({"error": "Error parsing VCF file."}, status_code=400)
 
     if variants is None:
         variants = []
@@ -173,7 +152,6 @@ async def analyze(file: UploadFile = File(...), drug: str = Form(...)):
 
     for d in drugs:
         risk = assess_risk(d, variants)
-
         detected_variants = risk.get("detected_variants", [])
 
         explanation_text = generate_explanation(
